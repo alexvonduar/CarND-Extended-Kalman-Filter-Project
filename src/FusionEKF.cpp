@@ -93,14 +93,22 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       float ro = measurement_pack.raw_measurements_[0];
       float theta = measurement_pack.raw_measurements_[1];
       float ro_dot = measurement_pack.raw_measurements_[2];
-      ekf_.x_ << ro * sin(theta), ro * cos(theta), ro_dot * sin(theta),
-          ro_dot * cos(theta);
+      float px = ro * cos(theta);
+      float py = ro * sin(theta);
+      float vx = 0;
+      float vy = 0;
+      ekf_.x_ << px, py, vx, vy;
+      //cout << "R: px " << px << " py " << py << " vx " << vx << " vy " << vy <<  " ro " << ro << " phi " << theta << " ro dot " << ro_dot << endl;
     } else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
       /**
       Initialize state.
       */
-      ekf_.x_ << measurement_pack.raw_measurements_[0],
-          measurement_pack.raw_measurements_[1], 0, 0;
+      float px = measurement_pack.raw_measurements_[0];
+      float py = measurement_pack.raw_measurements_[1];
+      float vx = 0;
+      float vy = 0;
+      ekf_.x_ << px, py, 0, 0;
+      //cout << "L: px " << px << " py " << py << " vx " << vx << " vy " << vy << endl;
     }
 
     previous_timestamp_ = measurement_pack.timestamp_;
@@ -136,6 +144,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       dt_4 * noise_ay / 4, 0, dt_3 * noise_ay / 2, dt_3 * noise_ax / 2, 0,
       dt_2 * noise_ax, 0, 0, dt_3 * noise_ay / 2, 0, dt_2 * noise_ay;
   ekf_.Predict();
+  //cout << "predict x_ = " << ekf_.x_ << endl;
+  //cout << "predict P_ = " << ekf_.P_ << endl;
 
   /*****************************************************************************
    *  Update
@@ -149,12 +159,29 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     // Radar updates
+#if 0
+    float ro = measurement_pack.raw_measurements_[0];
+    float theta = measurement_pack.raw_measurements_[1];
+    float ro_dot = measurement_pack.raw_measurements_[2];
+    float px = ro * cos(theta);
+    float py = ro * sin(theta);
+    float vx = 0;
+    float vy = 0;
+    cout << "R: px " << px << " py " << py << " vx " << vx << " vy " << vy <<  " ro " << ro << " phi " << theta << " ro dot " << ro_dot << endl;
+#endif
     Hj_ = tools.CalculateJacobian(ekf_.x_);
     ekf_.H_ = Hj_;
     ekf_.R_ = R_radar_;
     ekf_.UpdateEKF(measurement_pack.raw_measurements_);
   } else {
     // Laser updates
+#if 0
+    float px = measurement_pack.raw_measurements_[0];
+    float py = measurement_pack.raw_measurements_[1];
+    float vx = 0;
+    float vy = 0;
+    cout << "L: px " << px << " py " << py << " vx " << vx << " vy " << vy << endl;
+#endif
     ekf_.H_ = H_laser_;
     ekf_.R_ = R_laser_;
     ekf_.Update(measurement_pack.raw_measurements_);
